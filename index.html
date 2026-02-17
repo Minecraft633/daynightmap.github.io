@@ -6,9 +6,6 @@ body { margin:0; background:black; }
 h2 { text-align:center; color:white; }
 p { text-align:center; color:white; }
 canvas { display:block; margin:auto; margin-bottom:20px; }
-.slider-container { text-align:center; color:white; margin:10px; }
-.slider-container input { width:300px; }
-button { display:block; margin:10px auto; padding:5px 10px; }
 </style>
 </head>
 <body>
@@ -16,29 +13,8 @@ button { display:block; margin:10px auto; padding:5px 10px; }
 <h2 id="demo"></h2>
 
 <canvas id="earthCanvas" width="1024" height="512"></canvas>
+
 <canvas id="moonCanvas" width="512" height="256"></canvas>
-
-<div class="slider-container">
-  <label>Hour: <span id="hourVal">0</span></label><br>
-  <input type="range" id="hourSlider" min="0" max="23" value="0">
-</div>
-
-<div class="slider-container">
-  <label>Day: <span id="dayVal">1</span></label><br>
-  <input type="range" id="daySlider" min="1" max="31" value="1">
-</div>
-
-<div class="slider-container">
-  <label>Month: <span id="monthVal">1</span></label><br>
-  <input type="range" id="monthSlider" min="1" max="12" value="1">
-</div>
-
-<div class="slider-container">
-  <label>Year: <span id="yearVal">2026</span></label><br>
-  <input type="range" id="yearSlider" min="2000" max="2050" value="2026">
-</div>
-
-<button id="resetBtn">Reset Time</button>
 
 <p>Earth map by FarGetaNik</p>
 <p>Moon map recalibrated by me</p>
@@ -65,33 +41,9 @@ earthNight.src = "earth_map_night.png";
 const moonImg = new Image();
 moonImg.src = "moon_map.png";
 
-let useCustomDate = false;
-let customDate = new Date();
-
-const hourSlider = document.getElementById("hourSlider");
-const daySlider = document.getElementById("daySlider");
-const monthSlider = document.getElementById("monthSlider");
-const yearSlider = document.getElementById("yearSlider");
-
-const hourVal = document.getElementById("hourVal");
-const dayVal = document.getElementById("dayVal");
-const monthVal = document.getElementById("monthVal");
-const yearVal = document.getElementById("yearVal");
-
-hourSlider.oninput = () => { useCustomDate = true; hourVal.innerText = hourSlider.value; updateCustomDate(); };
-daySlider.oninput = () => { useCustomDate = true; dayVal.innerText = daySlider.value; updateCustomDate(); };
-monthSlider.oninput = () => { useCustomDate = true; monthVal.innerText = monthSlider.value; updateCustomDate(); };
-yearSlider.oninput = () => { useCustomDate = true; yearVal.innerText = yearSlider.value; updateCustomDate(); };
-
-document.getElementById("resetBtn").onclick = () => { useCustomDate = false; };
-
-
-function updateCustomDate(){
-  const h = parseInt(hourSlider.value);
-  const d = parseInt(daySlider.value);
-  const m = parseInt(monthSlider.value)-1;
-  const y = parseInt(yearSlider.value);
-  customDate = new Date(Date.UTC(y, m, d, h));
+function updateTime() {
+  const now = new Date();
+  document.getElementById("demo").innerHTML = now.toUTCString();
 }
 
 function getSolarDeclination(date) {
@@ -99,14 +51,16 @@ function getSolarDeclination(date) {
   return 23.44 * Math.sin((2 * Math.PI / 365) * (dayOfYear - 81));
 }
 
-function drawMoon(date){
+function drawMoon() {
+  const now = new Date();
+
   moonCtx.drawImage(moonImg, 0, 0, width_m, height_m);
   const imageData = moonCtx.getImageData(0, 0, width_m, height_m);
   const data = imageData.data;
 
-  const utcHours = date.getUTCHours() + date.getUTCMinutes()/60;
+  const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
   const sunLon = (utcHours / 24) * 360 - 180;
-  const decl = getSolarDeclination(date);
+  const decl = getSolarDeclination(now);
 
   const sunLatRad = decl * Math.PI/180;
   const sunLonRad = sunLon * Math.PI/180;
@@ -141,7 +95,9 @@ function drawMoon(date){
   moonCtx.putImageData(imageData, 0, 0);
 }
 
-function drawEarth(date){
+function drawEarth() {
+  const now = new Date();
+
   earthCtx.drawImage(earthDay, 0, 0, width, height);
   const dayData = earthCtx.getImageData(0,0,width,height);
 
@@ -150,9 +106,9 @@ function drawEarth(date){
 
   const finalData = earthCtx.createImageData(width,height);
 
-  const utcHours = date.getUTCHours() + date.getUTCMinutes()/60;
+  const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
   const sunLon = (utcHours / 24) * 360 - 180;
-  const decl = getSolarDeclination(date);
+  const decl = getSolarDeclination(now);
 
   const sunLatRad = decl * Math.PI/180;
   const sunLonRad = sunLon * Math.PI/180;
@@ -195,12 +151,11 @@ function drawEarth(date){
 
   earthCtx.putImageData(finalData,0,0);
 }
-
+ 
 function update(){
-  const now = useCustomDate ? customDate : new Date();
   updateTime();
-  drawMoon(now);
-  drawEarth(now);
+  drawMoon();
+  drawEarth();
 }
 
 let loaded=0;
