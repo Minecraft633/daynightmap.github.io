@@ -2,28 +2,71 @@
 <html>
 <head>
 <style>
-  h2 { text-align: center; }
+  body { margin: 0; background: black; }
+  h2 { text-align: center; color: white; }
+  canvas { display: block; margin: auto; }
 </style>
 </head>
 <body>
 
 <h2 id="demo"></h2>
-
-<img src="earth_map.png">
+<canvas id="earthCanvas" width="1024" height="512"></canvas>
 
 <script>
+const canvas = document.getElementById("earthCanvas");
+const ctx = canvas.getContext("2d");
+
+const earthImg = new Image();
+earthImg.src = "earth_map.png";
+
 function updateTime() {
-  const d = new Date();
-  document.getElementById("demo").innerHTML = d.toString();
+  const now = new Date();
+  document.getElementById("demo").innerHTML = now.toUTCString();
 }
 
-updateTime();
+function drawDayNight() {
+  const now = new Date();
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(earthImg, 0, 0, 1024, 512);
 
-setInterval(updateTime, 1000);
+  const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
+  const sunLongitude = (utcHours / 24) * 360 - 180;
+
+  const imageData = ctx.getImageData(0, 0, 1024, 512);
+  const data = imageData.data;
+
+  for (let y = 0; y < 512; y++) {
+    const lat = 90 - (y / 512) * 180;
+
+    for (let x = 0; x < 1024; x++) {
+      const lon = (x / 1024) * 360 - 180;
+
+      const index = (y * 1024 + x) * 4;
+
+      const diff = Math.abs(lon - sunLongitude);
+
+      if (diff > 90) {
+        data[index] *= 0.3;
+        data[index + 1] *= 0.3;
+        data[index + 2] *= 0.5;
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function update() {
+  updateTime();
+  drawDayNight();
+}
+
+earthImg.onload = function() {
+  update();
+  setInterval(update, 1000);
+};
 </script>
 
 </body>
-
 </html>
-
-
