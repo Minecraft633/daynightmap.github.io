@@ -2,22 +2,31 @@
 <html>
 <head>
 <style>
-  body { margin:0; background:black; }
-  h2 { text-align:center; color:white; }
-  canvas { display:block; margin:auto; }
+body { margin:0; background:black; }
+h2 { text-align:center; color:white; }
+canvas { display:block; margin:auto; margin-bottom:20px; } /* spacing between canvases */
 </style>
 </head>
 <body>
 
 <h2 id="demo"></h2>
+
+<canvas id="moonCanvas" width="1024" height="512"></canvas>
+
 <canvas id="earthCanvas" width="1024" height="512"></canvas>
 
 <script>
-const canvas = document.getElementById("earthCanvas");
-const ctx = canvas.getContext("2d");
+const moonCanvas = document.getElementById("moonCanvas");
+const moonCtx = moonCanvas.getContext("2d");
+
+const earthCanvas = document.getElementById("earthCanvas");
+const earthCtx = earthCanvas.getContext("2d");
 
 const width = 1024;
 const height = 512;
+
+const moonImg = new Image();
+moonImg.src = "moon_map.png";
 
 const earthDay = new Image();
 earthDay.src = "earth_map_day.png";
@@ -31,24 +40,64 @@ function updateTime() {
 }
 
 function getSolarDeclination(date) {
-  const dayOfYear = Math.floor(
-    (date - new Date(date.getFullYear(), 0, 0)) / 86400000
-  );
+  const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
   return 23.44 * Math.sin((2 * Math.PI / 365) * (dayOfYear - 81));
 }
 
-function drawDayNight() {
+function drawMoon() {
   const now = new Date();
 
-  // Draw day base
-  ctx.drawImage(earthDay, 0, 0, width, height);
-  const dayData = ctx.getImageData(0, 0, width, height);
+  moonCtx.drawImage(moonImg, 0, 0, width, height);
+  const imageData = moonCtx.getImageData(0, 0, width, height);
+  const data = imageData.data;
 
-  // Draw night lights
-  ctx.drawImage(earthNight, 0, 0, width, height);
-  const nightData = ctx.getImageData(0, 0, width, height);
+  const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
+  const sunLon = (utcHours / 24) * 360 - 180;
+  const decl = getSolarDeclination(now);
 
-  const finalData = ctx.createImageData(width, height);
+  const sunLatRad = decl * Math.PI/180;
+  const sunLonRad = sunLon * Math.PI/180;
+
+  const sx = Math.cos(sunLatRad) * Math.cos(sunLonRad);
+  const sy = Math.cos(sunLatRad) * Math.sin(sunLonRad);
+  const sz = Math.sin(sunLatRad);
+
+  for (let y=0; y<height; y++){
+    const lat = 90 - (y / height) * 180;
+    const latRad = lat * Math.PI/180;
+
+    for (let x=0; x<width; x++){
+      const lon = (x / width) * 360 - 180;
+      const lonRad = lon * Math.PI/180;
+
+      const px = Math.cos(latRad) * Math.cos(lonRad);
+      const py = Math.cos(latRad) * Math.sin(lonRad);
+      const pz = Math.sin(latRad);
+
+      const dot = px*sx + py*sy + pz*sz;
+      const i = (y * width + x) * 4;
+
+      if(dot < 0){
+        data[i] *= 0.05;
+        data[i+1] *= 0.05;
+        data[i+2] *= 0.05;
+      }
+    }
+  }
+
+  moonCtx.putImageData(imageData, 0, 0);
+}
+
+function drawEarth() {
+  const now = new Date();
+
+  earthCtx.drawImage(earthDay, 0, 0, width, height);
+  const dayData = earthCtx.getImageData(0,0,width,height);
+
+  earthCtx.drawImage(earthNight, 0, 0, width, height);
+  const nightData = earthCtx.getImageData(0,0,width,height);
+
+  const finalData = earthCtx.createImageData(width,height);
 
   const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
   const sunLon = (utcHours / 24) * 360 - 180;
@@ -63,71 +112,52 @@ function drawDayNight() {
 
   const twilightWidth = 0.03;
 
-  for (let y = 0; y < height; y++) {
-    const lat = 90 - (y / height) * 180;
-    const latRad = lat * Math.PI/180;
+  for(let y=0;y<height;y++){
+    const lat = 90 - (y/height)*180;
+    const latRad = lat*Math.PI/180;
 
-    for (let x = 0; x < width; x++) {
-      const lon = (x / width) * 360 - 180;
-      const lonRad = lon * Math.PI/180;
+    for(let x=0;x<width;x++){
+      const lon = (x/width)*360 - 180;
+      const lonRad = lon*Math.PI/180;
 
       const px = Math.cos(latRad) * Math.cos(lonRad);
       const py = Math.cos(latRad) * Math.sin(lonRad);
       const pz = Math.sin(latRad);
 
       const dot = px*sx + py*sy + pz*sz;
-      const i = (y * width + x) * 4;
+      const i = (y*width + x)*4;
 
       let nightFactor;
 
-      if (dot > twilightWidth) {
-        nightFactor = 0; // full day
-      } 
-      else if (dot < -twilightWidth) {
-        nightFactor = 1; // full night
-      } 
-      else {
-        // smooth twilight transition
-        nightFactor = (twilightWidth - dot) / (2 * twilightWidth);
-      }
+      if(dot > twilightWidth) nightFactor=0;
+      else if(dot < -twilightWidth) nightFactor=1;
+      else nightFactor = (twilightWidth - dot) / (2*twilightWidth);
 
-      // Darken terrain
       const darkness = 0.8 * nightFactor;
 
-      finalData.data[i] =
-        dayData.data[i] * (1 - darkness) +
-        nightData.data[i] * nightFactor;
-
-      finalData.data[i+1] =
-        dayData.data[i+1] * (1 - darkness) +
-        nightData.data[i+1] * nightFactor;
-
-      finalData.data[i+2] =
-        dayData.data[i+2] * (1 - darkness) +
-        nightData.data[i+2] * nightFactor;
-
+      finalData.data[i] = dayData.data[i]*(1-darkness) + nightData.data[i]*nightFactor;
+      finalData.data[i+1] = dayData.data[i+1]*(1-darkness) + nightData.data[i+1]*nightFactor;
+      finalData.data[i+2] = dayData.data[i+2]*(1-darkness) + nightData.data[i+2]*nightFactor;
       finalData.data[i+3] = 255;
     }
   }
 
-  ctx.putImageData(finalData, 0, 0);
+  earthCtx.putImageData(finalData,0,0);
 }
-
-function update() {
+ 
+function update(){
   updateTime();
-  drawDayNight();
+  drawMoon();
+  drawEarth();
 }
 
-let loaded = 0;
-earthDay.onload = () => { if (++loaded === 2) start(); };
-earthNight.onload = () => { if (++loaded === 2) start(); };
+let loaded=0;
+function checkLoad(){ if(++loaded===3){ update(); setInterval(update,1000); } }
+earthDay.onload = checkLoad;
+earthNight.onload = checkLoad;
+moonImg.onload = checkLoad;
 
-function start() {
-  update();
-  setInterval(update, 1000);
-}
 </script>
 
 </body>
 </html>
-
