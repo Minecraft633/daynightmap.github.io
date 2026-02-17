@@ -19,15 +19,17 @@ const ctx = canvas.getContext("2d");
 const width = 1024;
 const height = 512;
 
-const earthImg = new Image();
-earthImg.src = "earth_map.png";
+const earthDay = new Image();
+earthDay.src = "earth_map.png";
+
+const earthNight = new Image();
+earthNight.src = "earth_map_night.png";
 
 function updateTime() {
   const now = new Date();
   document.getElementById("demo").innerHTML = now.toUTCString();
 }
 
-// Solar declination approximation
 function getSolarDeclination(date) {
   const dayOfYear = Math.floor(
     (date - new Date(date.getFullYear(), 0, 0)) / 86400000
@@ -38,9 +40,13 @@ function getSolarDeclination(date) {
 function drawDayNight() {
   const now = new Date();
 
-  ctx.drawImage(earthImg, 0, 0, width, height);
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = imageData.data;
+  ctx.drawImage(earthDay, 0, 0, width, height);
+  const dayData = ctx.getImageData(0, 0, width, height);
+
+  ctx.drawImage(earthNight, 0, 0, width, height);
+  const nightData = ctx.getImageData(0, 0, width, height);
+
+  const finalData = ctx.createImageData(width, height);
 
   const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
   const sunLon = (utcHours / 24) * 360 - 180;
@@ -53,7 +59,7 @@ function drawDayNight() {
   const sy = Math.cos(sunLatRad) * Math.sin(sunLonRad);
   const sz = Math.sin(sunLatRad);
 
-  const twilightWidth = 0.03; // 🔥 adjust here for sharper/softer edge
+  const twilightWidth = 0.03;
 
   for (let y = 0; y < height; y++) {
     const lat = 90 - (y / height) * 180;
@@ -68,27 +74,34 @@ function drawDayNight() {
       const pz = Math.sin(latRad);
 
       const dot = px*sx + py*sy + pz*sz;
-      const index = (y * width + x) * 4;
+      const i = (y * width + x) * 4;
 
-      if (dot < -twilightWidth) {
-        // Full night
-        data[index] *= 0.2;
-        data[index+1] *= 0.2;
-        data[index+2] *= 0.35;
-      }
-      else if (dot < twilightWidth) {
-        // Twilight band
-        const t = (dot + twilightWidth) / (2 * twilightWidth);
-        const darkness = 1 - t;
+      let blend;
 
-        data[index] *= (1 - darkness * 0.8);
-        data[index+1] *= (1 - darkness * 0.8);
-        data[index+2] *= (1 - darkness * 0.6);
+      if (dot > twilightWidth) {
+        blend = 0; 
+      } 
+      else if (dot < -twilightWidth) {
+        blend = 1; 
+      } 
+      else {
+        blend = (twilightWidth - dot) / (2 * twilightWidth);
       }
+
+      finalData.data[i] =
+        dayData.data[i] * (1 - blend) + nightData.data[i] * blend;
+
+      finalData.data[i+1] =
+        dayData.data[i+1] * (1 - blend) + nightData.data[i+1] * blend;
+
+      finalData.data[i+2] =
+        dayData.data[i+2] * (1 - blend) + nightData.data[i+2] * blend;
+
+      finalData.data[i+3] = 255;
     }
   }
 
-  ctx.putImageData(imageData, 0, 0);
+  ctx.putImageData(finalData, 0, 0);
 }
 
 function update() {
@@ -96,10 +109,14 @@ function update() {
   drawDayNight();
 }
 
-earthImg.onload = function() {
+let loaded = 0;
+earthDay.onload = () => { if (++loaded === 2) start(); };
+earthNight.onload = () => { if (++loaded === 2) start(); };
+
+function start() {
   update();
   setInterval(update, 1000);
-};
+}
 </script>
 
 </body>
