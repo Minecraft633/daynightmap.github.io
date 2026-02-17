@@ -27,6 +27,7 @@ function updateTime() {
   document.getElementById("demo").innerHTML = now.toUTCString();
 }
 
+// Solar declination approximation
 function getSolarDeclination(date) {
   const dayOfYear = Math.floor(
     (date - new Date(date.getFullYear(), 0, 0)) / 86400000
@@ -43,16 +44,16 @@ function drawDayNight() {
 
   const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
   const sunLon = (utcHours / 24) * 360 - 180;
-
   const decl = getSolarDeclination(now);
 
-  // Convert sun to 3D vector
   const sunLatRad = decl * Math.PI/180;
   const sunLonRad = sunLon * Math.PI/180;
 
   const sx = Math.cos(sunLatRad) * Math.cos(sunLonRad);
   const sy = Math.cos(sunLatRad) * Math.sin(sunLonRad);
   const sz = Math.sin(sunLatRad);
+
+  const twilightWidth = 0.03; // 🔥 adjust here for sharper/softer edge
 
   for (let y = 0; y < height; y++) {
     const lat = 90 - (y / height) * 180;
@@ -67,11 +68,19 @@ function drawDayNight() {
       const pz = Math.sin(latRad);
 
       const dot = px*sx + py*sy + pz*sz;
-
       const index = (y * width + x) * 4;
 
-      if (dot < 0) {
-        const darkness = Math.min(1, -dot);
+      if (dot < -twilightWidth) {
+        // Full night
+        data[index] *= 0.2;
+        data[index+1] *= 0.2;
+        data[index+2] *= 0.35;
+      }
+      else if (dot < twilightWidth) {
+        // Twilight band
+        const t = (dot + twilightWidth) / (2 * twilightWidth);
+        const darkness = 1 - t;
+
         data[index] *= (1 - darkness * 0.8);
         data[index+1] *= (1 - darkness * 0.8);
         data[index+2] *= (1 - darkness * 0.6);
