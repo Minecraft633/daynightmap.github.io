@@ -20,7 +20,7 @@ const width = 1024;
 const height = 512;
 
 const earthDay = new Image();
-earthDay.src = "earth_map.png";
+earthDay.src = "earth_map_day.png";
 
 const earthNight = new Image();
 earthNight.src = "earth_map_night.png";
@@ -40,9 +40,11 @@ function getSolarDeclination(date) {
 function drawDayNight() {
   const now = new Date();
 
+  // Draw day base
   ctx.drawImage(earthDay, 0, 0, width, height);
   const dayData = ctx.getImageData(0, 0, width, height);
 
+  // Draw night lights
   ctx.drawImage(earthNight, 0, 0, width, height);
   const nightData = ctx.getImageData(0, 0, width, height);
 
@@ -76,26 +78,33 @@ function drawDayNight() {
       const dot = px*sx + py*sy + pz*sz;
       const i = (y * width + x) * 4;
 
-      let blend;
+      let nightFactor;
 
       if (dot > twilightWidth) {
-        blend = 0; 
+        nightFactor = 0; // full day
       } 
       else if (dot < -twilightWidth) {
-        blend = 1; 
+        nightFactor = 1; // full night
       } 
       else {
-        blend = (twilightWidth - dot) / (2 * twilightWidth);
+        // smooth twilight transition
+        nightFactor = (twilightWidth - dot) / (2 * twilightWidth);
       }
 
+      // Darken terrain
+      const darkness = 0.8 * nightFactor;
+
       finalData.data[i] =
-        dayData.data[i] * (1 - blend) + nightData.data[i] * blend;
+        dayData.data[i] * (1 - darkness) +
+        nightData.data[i] * nightFactor;
 
       finalData.data[i+1] =
-        dayData.data[i+1] * (1 - blend) + nightData.data[i+1] * blend;
+        dayData.data[i+1] * (1 - darkness) +
+        nightData.data[i+1] * nightFactor;
 
       finalData.data[i+2] =
-        dayData.data[i+2] * (1 - blend) + nightData.data[i+2] * blend;
+        dayData.data[i+2] * (1 - darkness) +
+        nightData.data[i+2] * nightFactor;
 
       finalData.data[i+3] = 255;
     }
@@ -121,3 +130,4 @@ function start() {
 
 </body>
 </html>
+
