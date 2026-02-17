@@ -99,50 +99,54 @@ function drawEarth(date){
 }
 
 
-function drawMoon(date){
-
+function drawMoon(date) {
   const newMoon = new Date("2000-01-06T18:14:00Z"); 
   const synodicMonth = 29.530588853; // days
-  const daysSinceNew = (date - newMoon)/86400000;
-  const phase = (daysSinceNew % synodicMonth)/synodicMonth; 
+  const daysSinceNew = (date - newMoon) / 86400000;
+  const phase = (daysSinceNew % synodicMonth) / synodicMonth; 
   const phaseAngle = phase * 360; 
 
+  const subSolarLon = 180 - phaseAngle;
+  const subSolarLat = 0;
 
-  const subSolarLon = 180 - phaseAngle; 
-  const subSolarLat = 0; 
-
-  moonCtx.drawImage(moonImg,0,0,width_m,height_m);
-  const imageData = moonCtx.getImageData(0,0,width_m,height_m);
+  moonCtx.drawImage(moonImg, 0, 0, width_m, height_m);
+  const imageData = moonCtx.getImageData(0, 0, width_m, height_m);
   const data = imageData.data;
 
-  for(let y=0;y<height_m;y++){
-    const lat = 90 - (y/height_m)*180;
-    const latRad = lat*Math.PI/180;
+  const twilightWidth = 0.03;
 
-    for(let x=0;x<width_m;x++){
-      const lon = (x/width_m)*360 - 180;
-      const lonRad = lon*Math.PI/180;
+  for (let y = 0; y < height_m; y++) {
+    const lat = 90 - (y / height_m) * 180;
+    const latRad = lat * Math.PI / 180;
 
-      const px = Math.cos(latRad)*Math.cos(lonRad);
-      const py = Math.cos(latRad)*Math.sin(lonRad);
+    for (let x = 0; x < width_m; x++) {
+      const lon = (x / width_m) * 360 - 180;
+      const lonRad = lon * Math.PI / 180;
+
+      const px = Math.cos(latRad) * Math.cos(lonRad);
+      const py = Math.cos(latRad) * Math.sin(lonRad);
       const pz = Math.sin(latRad);
 
-      const sunX = Math.cos(subSolarLat*Math.PI/180) * Math.cos(subSolarLon*Math.PI/180);
-      const sunY = Math.cos(subSolarLat*Math.PI/180) * Math.sin(subSolarLon*Math.PI/180);
-      const sunZ = Math.sin(subSolarLat*Math.PI/180);
+      const sunX = Math.cos(subSolarLat * Math.PI/180) * Math.cos(subSolarLon * Math.PI/180);
+      const sunY = Math.cos(subSolarLat * Math.PI/180) * Math.sin(subSolarLon * Math.PI/180);
+      const sunZ = Math.sin(subSolarLat * Math.PI/180);
 
       const dot = px*sunX + py*sunY + pz*sunZ;
-      const i = (y*width_m + x)*4;
+      const i = (y * width_m + x) * 4;
 
-      if(dot < 0){
-        data[i] *= 0.05;
-        data[i+1] *= 0.05;
-        data[i+2] *= 0.05;
-      }
+      let nightFactor;
+      if(dot > twilightWidth) nightFactor = 0; 
+      else if(dot < -twilightWidth) nightFactor = 1;
+      else nightFactor = (twilightWidth - dot)/(2*twilightWidth);
+
+      const darkness = 0.85 * nightFactor;
+      data[i] = data[i] * (1 - darkness);
+      data[i+1] = data[i+1] * (1 - darkness);
+      data[i+2] = data[i+2] * (1 - darkness);
     }
   }
 
-  moonCtx.putImageData(imageData,0,0);
+  moonCtx.putImageData(imageData, 0, 0);
 }
 
 function update(){
@@ -166,3 +170,4 @@ moonImg.onload = checkLoad;
 
 </body>
 </html>
+
