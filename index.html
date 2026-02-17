@@ -2,9 +2,9 @@
 <html>
 <head>
 <style>
-  body { margin: 0; background: black; }
-  h2 { text-align: center; color: white; }
-  canvas { display: block; margin: auto; }
+  body { margin:0; background:black; }
+  h2 { text-align:center; color:white; }
+  canvas { display:block; margin:auto; }
 </style>
 </head>
 <body>
@@ -16,6 +16,9 @@
 const canvas = document.getElementById("earthCanvas");
 const ctx = canvas.getContext("2d");
 
+const width = 1024;
+const height = 512;
+
 const earthImg = new Image();
 earthImg.src = "earth_map.png";
 
@@ -24,32 +27,54 @@ function updateTime() {
   document.getElementById("demo").innerHTML = now.toUTCString();
 }
 
+function getSolarDeclination(date) {
+  const dayOfYear = Math.floor(
+    (date - new Date(date.getFullYear(), 0, 0)) / 86400000
+  );
+  return 23.44 * Math.sin((2 * Math.PI / 365) * (dayOfYear - 81));
+}
+
 function drawDayNight() {
   const now = new Date();
-  
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(earthImg, 0, 0, 1024, 512);
 
-  const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
-  const sunLongitude = (utcHours / 24) * 360 - 180;
-
-  const imageData = ctx.getImageData(0, 0, 1024, 512);
+  ctx.drawImage(earthImg, 0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
-  for (let y = 0; y < 512; y++) {
-    const lat = 90 - (y / 512) * 180;
+  const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
+  const sunLon = (utcHours / 24) * 360 - 180;
 
-    for (let x = 0; x < 1024; x++) {
-      const lon = (x / 1024) * 360 - 180;
+  const decl = getSolarDeclination(now);
 
-      const index = (y * 1024 + x) * 4;
+  // Convert sun to 3D vector
+  const sunLatRad = decl * Math.PI/180;
+  const sunLonRad = sunLon * Math.PI/180;
 
-      const diff = Math.abs(lon - sunLongitude);
+  const sx = Math.cos(sunLatRad) * Math.cos(sunLonRad);
+  const sy = Math.cos(sunLatRad) * Math.sin(sunLonRad);
+  const sz = Math.sin(sunLatRad);
 
-      if (diff > 90) {
-        data[index] *= 0.3;
-        data[index + 1] *= 0.3;
-        data[index + 2] *= 0.5;
+  for (let y = 0; y < height; y++) {
+    const lat = 90 - (y / height) * 180;
+    const latRad = lat * Math.PI/180;
+
+    for (let x = 0; x < width; x++) {
+      const lon = (x / width) * 360 - 180;
+      const lonRad = lon * Math.PI/180;
+
+      const px = Math.cos(latRad) * Math.cos(lonRad);
+      const py = Math.cos(latRad) * Math.sin(lonRad);
+      const pz = Math.sin(latRad);
+
+      const dot = px*sx + py*sy + pz*sz;
+
+      const index = (y * width + x) * 4;
+
+      if (dot < 0) {
+        const darkness = Math.min(1, -dot);
+        data[index] *= (1 - darkness * 0.8);
+        data[index+1] *= (1 - darkness * 0.8);
+        data[index+2] *= (1 - darkness * 0.6);
       }
     }
   }
