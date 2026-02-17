@@ -22,8 +22,11 @@ const moonCtx = moonCanvas.getContext("2d");
 const earthCanvas = document.getElementById("earthCanvas");
 const earthCtx = earthCanvas.getContext("2d");
 
-const width = 4096;
-const height = 2048;
+const width = 1024;
+const height = 512;
+
+const width_m = 1024;
+const height_m = 512;
 
 const earthDay = new Image();
 earthDay.src = "earth_map_day.png";
@@ -47,8 +50,8 @@ function getSolarDeclination(date) {
 function drawMoon() {
   const now = new Date();
 
-  moonCtx.drawImage(moonImg, 0, 0, width, height);
-  const imageData = moonCtx.getImageData(0, 0, width, height);
+  moonCtx.drawImage(moonImg, 0, 0, width_m, height_m);
+  const imageData = moonCtx.getImageData(0, 0, width_m, height_m);
   const data = imageData.data;
 
   const utcHours = now.getUTCHours() + now.getUTCMinutes()/60;
@@ -62,12 +65,12 @@ function drawMoon() {
   const sy = Math.cos(sunLatRad) * Math.sin(sunLonRad);
   const sz = Math.sin(sunLatRad);
 
-  for (let y=0; y<height; y++){
-    const lat = 90 - (y / height) * 180;
+  for (let y=0; y<height_m; y++){
+    const lat = 90 - (y / height_m) * 180;
     const latRad = lat * Math.PI/180;
 
-    for (let x=0; x<width; x++){
-      const lon = (x / width) * 360 - 180;
+    for (let x=0; x<width_m; x++){
+      const lon = (x / width_m) * 360 - 180;
       const lonRad = lon * Math.PI/180;
 
       const px = Math.cos(latRad) * Math.cos(lonRad);
@@ -75,7 +78,7 @@ function drawMoon() {
       const pz = Math.sin(latRad);
 
       const dot = px*sx + py*sy + pz*sz;
-      const i = (y * width + x) * 4;
+      const i = (y * width_m + x) * 4;
 
       if(dot < 0){
         data[i] *= 0.05;
@@ -161,3 +164,4 @@ moonImg.onload = checkLoad;
 
 </body>
 </html>
+
