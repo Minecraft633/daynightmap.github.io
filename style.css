@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('FiraSans-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 body {
-  font-family: 'Fira Sans';font-size: 22px;
+  font-family: 'Fira Sans', sans-serif;
+  font-size: 22px;
 }
