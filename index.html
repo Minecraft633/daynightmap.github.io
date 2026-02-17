@@ -11,9 +11,9 @@ canvas { display:block; margin:auto; margin-bottom:20px; } /* spacing between ca
 
 <h2 id="demo"></h2>
 
-<canvas id="moonCanvas" width="1024" height="512"></canvas>
-
 <canvas id="earthCanvas" width="1024" height="512"></canvas>
+
+<canvas id="moonCanvas" width="512" height="256"></canvas>
 
 <script>
 const moonCanvas = document.getElementById("moonCanvas");
@@ -22,17 +22,17 @@ const moonCtx = moonCanvas.getContext("2d");
 const earthCanvas = document.getElementById("earthCanvas");
 const earthCtx = earthCanvas.getContext("2d");
 
-const width = 1024;
-const height = 512;
-
-const moonImg = new Image();
-moonImg.src = "moon_map.png";
+const width = 4096;
+const height = 2048;
 
 const earthDay = new Image();
 earthDay.src = "earth_map_day.png";
 
 const earthNight = new Image();
 earthNight.src = "earth_map_night.png";
+
+const moonImg = new Image();
+moonImg.src = "moon_map.png";
 
 function updateTime() {
   const now = new Date();
